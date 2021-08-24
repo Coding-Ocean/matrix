@@ -1,6 +1,15 @@
 #define _MAT
 #ifdef _MAT
 
+#include"libOne.h"
+void gmain() {
+    window(1000, 1000);
+    while (notQuit) {
+        clear();
+        mathAxis(3.1f, 255);
+    }
+}
+
 #endif
 
 #ifdef _MAT22
