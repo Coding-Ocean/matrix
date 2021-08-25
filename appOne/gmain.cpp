@@ -1,4 +1,5 @@
 #define _MAT
+
 #ifdef _MAT
 
 #include"libOne.h"
@@ -67,8 +68,10 @@ public:
     //２行２列行列どうしの掛け算
     MAT22 operator*(const MAT22& m) {
         return MAT22(
+            //１行目
             _11 * m._11 + _12 * m._21,//１行１列の要素
             _11 * m._12 + _12 * m._22,//１行２列の要素
+            //２行目
             _21 * m._11 + _22 * m._21,//２行１列の要素
             _21 * m._12 + _22 * m._22 //２行２列の要素
         );
@@ -97,15 +100,17 @@ void gmain() {
     MAT22 sm;//scaling matrix
     MAT22 rm;//rotate matrix
     float angle = 0;
+    MAT22 mat;//合成した行列
 
     while (notQuit) {
         background();
         mathAxis(2.1f,255);
-        //行列をつくる
+        //各行列をつくる
         sm.scaling(0.5f,2.0f);
         angle += 1;
         rm.rotate(angle);
-        MAT22 mat = sm * rm;
+        //行列を合成する
+        mat = sm * rm;
         //座標変換する
         p = mat * op;
         //描画
@@ -113,7 +118,7 @@ void gmain() {
         stroke(c);
         //元の座標
         mathPoint(op.x, op.y);
-        //返還後の座標
+        //変換後の座標
         mathPoint(p.x, p.y);
     }
 }
@@ -143,39 +148,48 @@ public:
         this->_21 = _21; this->_22 = _22; this->_23 = _23;
         this->_31 = _31; this->_32 = _32; this->_33 = _33;
     }
+    //単位行列をつくる
     void identity() {
         _11 = 1; _12 = 0; _13 = 0;
         _21 = 0; _22 = 1; _23 = 0;
         _31 = 0; _32 = 0; _33 = 1;
     }
+    //拡大縮小行列をつくる
     void scaling(float sx, float sy) {
         _11 = sx;
         _22 = sy;
     }
+    //回転行列をつくる
     void rotate(float angle) {
         float c = cos(angle);
         float s = sin(angle);
         _11 = c; _12 = -s;
         _21 = s; _22 = c;
     }
+    //平行移動行列をつくる
     void translate(float x, float y) {
         _13 = x;
         _23 = y;
     }
+    //「３行３列行列」と「２行１列行列（２次元ベクトル）＋１行」の掛け算
     VEC operator*(const VEC& v) {
         return VEC(
             _11 * v.x + _12 * v.y + _13 * 1,
             _21 * v.x + _22 * v.y + _23 * 1
         );
     }
+    //３行３列行列どうしの掛け算
     MAT33 operator*(const MAT33& m) {
         return MAT33(
+            //１行目
             _11 * m._11 + _12 * m._21 + _13 * m._31,
             _11 * m._12 + _12 * m._22 + _13 * m._32,
             _11 * m._13 + _12 * m._23 + _13 * m._33,
+            //２行目
             _21 * m._11 + _22 * m._21 + _23 * m._31,
             _21 * m._12 + _22 * m._22 + _23 * m._32,
             _21 * m._13 + _22 * m._23 + _23 * m._33,
+            //３行目
             _31 + m._11 + _32 * m._21 + _33 * m._31,
             _31 + m._12 + _32 * m._22 + _33 * m._32,
             _31 + m._13 + _32 * m._23 + _33 * m._33
@@ -200,26 +214,32 @@ void gmain() {
     while (notQuit) {
         background();
         mathAxis(3, 128);
-
-        sm.scaling(0.4f, 0.4f);
-        rm.rotate(angle*4);
-        tm.translate(1, 0);
+        //各行列をつくる
         rm2.rotate(angle);
-        mat = rm2 * tm * rm * sm;
+        tm.translate(1, 0);
+        rm.rotate(angle*4);
+        sm.scaling(0.4f, 0.4f);
         angle += 1;
-
+        //行列を合成する
+        mat = rm2 * tm * rm * sm;
+        //座標変換
         p = mat * op;
-
+        //描画
         strokeWeight(20);
         stroke(c);
-        mathPoint(op.x, op.y);
-        mathPoint(p.x, p.y);
+        mathPoint(op.x, op.y);//元の座標
+        mathPoint(p.x, p.y);//変換後の座標
     }
 }
 #endif
 
 #ifdef _MAT33_OPT
+//---------------------------------------------------------------------
+//「行列クラスの最適化」と「星形アニメーション」
+//---------------------------------------------------------------------
+
 #include"libOne.h"
+//VECは変更なし
 class VEC {
 public:
     float x, y;
@@ -228,14 +248,18 @@ public:
         this->y = y;
     }
 };
+
+//---------------------------------------------------------------------
+//行列の要素_31,_32,_33は0,0,1のまま変化しないため省略することができる
+//---------------------------------------------------------------------
 class MAT33 {
 public:
     float _11, _12, _13;
     float _21, _22, _23;
     //float _31, _32, _33;
     MAT33(float _11=1, float _12=0, float _13=0,
-          float _21=0, float _22=1, float _23=0
-        //,float _31, float _32, float _33
+          float _21=0, float _22=1, float _23=0//,
+          //float _31=0, float _32=0, float _33=1
     ) {
         this->_11 = _11; this->_12 = _12; this->_13 = _13;
         this->_21 = _21; this->_22 = _22; this->_23 = _23;
@@ -262,7 +286,7 @@ public:
     }
     VEC operator*(const VEC& v) {
         return VEC(
-            _11 * v.x + _12 * v.y + _13,// * 1,
+            _11 * v.x + _12 * v.y + _13,// * 1,←1は掛ける必要がない
             _21 * v.x + _22 * v.y + _23// * 1
         );
     }
@@ -273,57 +297,63 @@ public:
             _11 * m._13 + _12 * m._23 + _13,// * m._33,
             _21 * m._11 + _22 * m._21,// +_23 * m._31,
             _21 * m._12 + _22 * m._22,// + _23 * m._32,
-            _21 * m._13 + _22 * m._23 + _23// * m._33
-            //,_31 + m._11 + _32 * m._21 + _33 * m._31,
+            _21 * m._13 + _22 * m._23 + _23// * m._33,
+            //_31 + m._11 + _32 * m._21 + _33 * m._31,
             //_31 + m._12 + _32 * m._22 + _33 * m._32,
             //_31 + m._13 + _32 * m._23 + _33 * m._33
         );
     }
 };
 
+//------------------------------------------------------------------------
+//星形に用意した座標を行列で動かす
+//------------------------------------------------------------------------
 void background() {
     fill(0, 0, 20); noStroke(); rect(0, 0, width, height);
 }
-
 void gmain() {
     window(1080, 1080, full);
     hideCursor();
     angleMode(DEGREES);
     colorMode(HSV);
+    //座標を配列で複数用意する
     const int num = 10;
-    COLOR c[num];
     VEC op[num];
     VEC p[num];
-    float angle = 360.0f / num;
+    COLOR c[num];
+    //星形になる座標を設定
+    float theta = 360.0f / num;
     for (int i = 0; i < num; i++) {
-        float r = 0.5f + 0.5f * !(i % 2);
-        op[i] = VEC(sin(angle * i) * r, cos(angle * i) * r);
-        c[i] = COLOR(angle * i, 128, 255);
+        float r = 1.0f - 0.5f * (i % 2);//radius
+        op[i] = VEC(sin(theta * i) * r, cos(theta * i) * r);
+        c[i] = COLOR(theta * i, 128, 255);
     }
+    //全行列
     MAT33 mat, tm, rm, sm, rm2;
-    angle = 0;
+    float angle = 0;
     while (notQuit) {
         background();
         axisMode(NODRAW);
         mathAxis(2, 128);
-
+        //行列をつくる
         rm2.rotate(angle);
         tm.translate(1, 0);
-        rm.rotate(angle * 4);
         sm.scaling(0.25f, 0.5f);
+        rm.rotate(angle * 4);
         angle += 0.5f;
-        MAT33 m = rm2 * tm * sm * rm;
-
+        //行列を合成する
+        mat = rm2 * tm * sm * rm;
+        //座標変換する
         for (int i = 0; i < num; i++) {
-            p[i] = m * op[i];
+            p[i] = mat * op[i];
         }
-
+        //描画する
         for (int i = 0; i < num; i++) {
             strokeWeight(10);
             stroke(c[i]);
             mathPoint(op[i].x, op[i].y);
             mathPoint(p[i].x, p[i].y);
-            int j = (i + 1) % num;
+            int j = (i + 1) % num;//iが最後の座標を指すとき、ｊを0とする
             mathLine(p[i].x, p[i].y, p[j].x, p[j].y);
         }
     }
@@ -403,20 +433,23 @@ void gmain() {
     hideCursor();
     angleMode(DEGREES);
     colorMode(HSV);
+    
     std::vector<COLOR> c;
     std::vector<VEC> op;
     int num = 10;
     float angle = 360.0f / num;
     for (int i = 0; i < num; i++) {
-        float r = 0.5f + 0.5f * !(i % 2);
+        float r = 1.0f - 0.5f * (i % 2);
         op.emplace_back(sin(angle * i) * r, cos(angle * i) * r);
         c.emplace_back(angle * i, 128, 255);
     }
     std::vector<VEC> p = op;
+    
     MAT33 mat, tm, rm, sm, rm2;
     angle = 0;
-    int no = 0;
+
     int numSamples = 8;
+    int no = 0;
     while (notQuit) {
         background();
         mathAxis(2, 128);
@@ -434,6 +467,7 @@ void gmain() {
         switch (no) {
         case 0:
             print("op[2]を回転");
+
             rm.rotate(angle);
             angle += 2.5f;
             mat = rm;
@@ -444,10 +478,10 @@ void gmain() {
             stroke(c[2]);
             mathPoint(op[2].x, op[2].y);
             mathPoint(p[2].x, p[2].y);
-        
             break;
         case 1:
             print("op[2]を回転して、縦長にスケーリング");
+
             rm.rotate(angle);
             sm.scaling(0.2f, 0.7f);
             angle += 2.5f;
@@ -462,6 +496,7 @@ void gmain() {
             break;
         case 2:
             print("op[2]を回転して、0.5にスケーリング");
+
             rm.rotate(angle);
             sm.scaling(0.5f, 0.5f);
             angle += 10;
@@ -476,6 +511,7 @@ void gmain() {
             break;
         case 3:
             print("op[2]を回転して、0.5にスケーリング、右に１平行移動");
+
             tm.translate(1, 0);
             rm.rotate(angle);
             sm.scaling(0.5f, 0.5f);
@@ -491,6 +527,7 @@ void gmain() {
             break;
         case 4:
             print("op[2]を回転して、0.5にスケーリング、右に１平行移動、さらに回転");
+
             rm2.rotate(angle/4);
             tm.translate(1, 0);
             rm.rotate(angle);
@@ -507,6 +544,7 @@ void gmain() {
             break;
         case 5:
             print("すべての op を回転して、0.5にスケーリング、右に１平行移動、さらに回転");
+
             rm2.rotate(angle/2);
             tm.translate(1, 0);
             rm.rotate(angle);
@@ -527,6 +565,7 @@ void gmain() {
             break;
         case 6:
             print("op 非表示");
+
             rm2.rotate(angle / 2);
             tm.translate(1, 0);
             rm.rotate(angle);
@@ -546,6 +585,7 @@ void gmain() {
             break;
         case 7:
             print("点と点を線で結ぶ");
+
             rm2.rotate(angle/2);
             tm.translate(1, 0);
             rm.rotate(angle);
